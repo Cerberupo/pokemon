@@ -1,4 +1,4 @@
-import { postRouter } from "a2r/server/api/routers/post";
+import { pokemonRouter } from "a2r/server/api/routers/pokemon";
 import { createCallerFactory, createTRPCRouter } from "a2r/server/api/trpc";
 
 /**
@@ -7,7 +7,7 @@ import { createCallerFactory, createTRPCRouter } from "a2r/server/api/trpc";
  * All routers added in /api/routers should be manually added here.
  */
 export const appRouter = createTRPCRouter({
-  post: postRouter,
+  pokemon: pokemonRouter,
 });
 
 // export type definition of API

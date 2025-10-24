@@ -1,29 +1,56 @@
-# Create T3 App
+# Pokédex en tiempo real (T3 + Next.js + tRPC)
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+Pequeño proyecto T3 que muestra información en tiempo real de la PokéAPI: listado completo de Pokémon (sin paginación), filtros por tipo y generación, buscador con evoluciones, y página de detalle con stats y cadena evolutiva. El estado de filtros y el scroll se conservan al navegar.
 
-## What's next? How do I make an app with this?
+## Cómo levantar el proyecto en local
 
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
+Requisitos:
+- Node.js 18+ (recomendado 20+)
+- pnpm (el repo usa pnpm@10)
 
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
+Pasos:
+1. Instala dependencias
+   - `pnpm install`
+2. Arranca en desarrollo
+   - `pnpm dev`
+   - Abre http://localhost:3000
+3. Build + preview (opcional)
+   - `pnpm preview` (hace `next build` y luego `next start`)
 
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
+Scripts útiles:
+- `pnpm dev`: desarrollo con Next.js
+- `pnpm build`: compila la app
+- `pnpm start`: arranca la app ya compilada
+- `pnpm check`: lint + typecheck
 
-## Learn More
+No se requieren variables de entorno para probar en local.
 
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
+## ¿Cómo funciona?
 
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
+Arquitectura (T3):
+- Next.js 15 (App Router, RSC) + Tailwind para estilos.
+- tRPC para la API (carpeta `src/server/api`). En componentes de servidor se usa un “caller” directo y en cliente React Query.
+- Zustand para estado global del listado (filtros y posición de scroll).
+- pokedex-promise-v2 como cliente de la PokéAPI con llamadas en batch.
 
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
+Flujo principal:
+- Listado (`/`):
+  - Los filtros (search, type, generation) viven en Zustand.
+  - El buscador tiene debounce (400 ms) para no saturar la API.
+  - La query `pokemon.list` ejecuta SIEMPRE en servidor y devuelve todo el conjunto ya ordenado por id de especie.
+  - Optimizaciones en servidor:
+    - Resolución por lotes de species → variedad por defecto → detalles de Pokémon.
+    - Expansión de búsqueda por cadenas evolutivas en batch.
+    - Filtro por tipo validado sobre la variedad por defecto (evita falsos positivos por megas/formas).
+  - Al navegar al detalle se guarda el `scrollY` y, al volver, se restaura.
 
-## How do I deploy this?
+- Detalle (`/pokemon/[name]`):
+  - Muestra nombre, imagen oficial, generación, tipos, stats, habilidades y cadena evolutiva completa (con resaltado del actual).
+  - Botón “Back to list” prioriza `router.back()` para mantener scroll; hay fallback a `push('/', { scroll: false })`.
+  - En caso de error al cargar, se muestra un aviso y se vuelve al listado.
 
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+Puntos de entrada clave:
+- `src/server/api/routers/pokemon.ts`: lógica de listados, filtros, búsqueda y detalle (con llamadas batched a la PokéAPI).
+- `src/app/_components/*`: filtros, tarjetas, listado, detalle y evolución.
+- `src/store/pokemonStore.ts`: Zustand (filtros + scroll).
+- `src/trpc/*`: configuración de tRPC en servidor y cliente.
